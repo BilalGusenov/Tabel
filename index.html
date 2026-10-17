@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Табель смен</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#E8EDEB; --surface:#FFFFFF; --surface2:#F2F6F4; --ink:#12201B; --muted:#586861; --line:#CFD9D4;
+  --accent:#0E7A5C; --accent-ink:#FFFFFF; --stop:#B3362B; --stop-ink:#FFFFFF; --warn:#8A5700; --warn-bg:#FFF0D2;
+  --font-display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0E1512; --surface:#161F1B; --surface2:#1C2823; --ink:#E6EFEA; --muted:#92A49C; --line:#2B3A34;
+    --accent:#3DCB9D; --accent-ink:#06231A; --stop:#F0786B; --stop-ink:#2A0A06; --warn:#F2B84B; --warn-bg:#33270F;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.45;padding:20px 16px 48px}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.col{display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{margin:0;font-family:var(--font-display);font-weight:600;letter-spacing:.01em;text-wrap:balance}
+h1{font-size:30px;line-height:1} h2{font-size:28px;line-height:1.05} h3{font-size:20px}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+.card.flat{background:var(--surface2)}
+button{font-family:var(--font-body)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);font:500 14px var(--font-body);padding:9px 14px;border-radius:9px;cursor:pointer;text-decoration:none;display:inline-block}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.stop{background:var(--stop);border-color:var(--stop);color:var(--stop-ink)}
+.btn.ghost{background:transparent}
+.btn.small{padding:5px 10px;font-size:13px}
+.btn.danger{color:var(--stop);border-color:var(--stop)}
+.btn.big{width:100%;padding:16px;font:600 22px var(--font-display);letter-spacing:.03em;text-transform:uppercase;border-radius:10px}
+label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted);font-weight:500;min-width:0}
+input{font:400 16px var(--font-body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px 12px;width:100%;min-width:0}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.err{color:var(--stop);font-size:13px;min-height:1em;margin:0}
+.hint{color:var(--muted);font-size:13px;margin:0}
+.notice{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:12px 14px;font-size:14px}
+.who{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.punch{display:flex;flex-direction:column;gap:14px}
+.status{display:flex;flex-direction:column;gap:2px}
+.status .line{display:flex;align-items:center;gap:8px;font-weight:500}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--line);flex:none}
+.dot.on{background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)}
+@media (prefers-reduced-motion:no-preference){.dot.on{animation:pulse 2s ease-in-out infinite}}
+@keyframes pulse{50%{box-shadow:0 0 0 7px color-mix(in srgb,var(--accent) 6%,transparent)}}
+.clock{font-size:44px;font-weight:500;letter-spacing:.02em;line-height:1.1}
+.stub{border-top:2px dashed var(--line);margin:4px -4px 0}
+.monthnav{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.monthnav .label{font-family:var(--font-display);font-size:22px;font-weight:600}
+.stats{display:grid;grid-template-columns:.7fr 1fr 1.3fr;gap:10px}
+.stat{display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat .v{font-family:var(--font-display);font-size:clamp(26px,8vw,38px);font-weight:600;line-height:1.05;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat.small .v{font-size:clamp(20px,6vw,26px)}
+.list{display:flex;flex-direction:column}
+.shift{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto;gap:4px 10px;padding:11px 0;border-top:1px solid var(--line);align-items:baseline}
+.shift:first-child{border-top:0}
+.shift .t{font-family:var(--font-mono);font-size:13px;color:var(--muted)}
+.shift .m{text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;background:var(--surface2);border:1px solid var(--line);color:var(--muted);margin-left:6px}
+.tag.live{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tag.warn{background:var(--warn-bg);border-color:transparent;color:var(--warn)}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.table{display:flex;flex-direction:column}
+.row{display:grid;grid-template-columns:minmax(0,1.7fr) .45fr .8fr 1fr;gap:8px;align-items:center;padding:12px 0;border:0;border-top:1px solid var(--line);text-align:left;width:100%;background:none;color:inherit;font:inherit}
+.row.head{border-top:0;padding-top:0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
+button.row{cursor:pointer}
+.row .n{font-weight:500;min-width:0;overflow-wrap:anywhere}
+.row .sub{display:block;font-size:12px;color:var(--muted);font-weight:400}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.row.total{font-weight:600;border-top:2px solid var(--ink)}
+.detail{background:var(--surface2);border-radius:10px;padding:6px 14px 14px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px}
+.code{font-family:var(--font-mono);font-size:20px;letter-spacing:.12em;font-weight:500}
+.empty{text-align:center;padding:28px 12px;color:var(--muted)}
+.empty h3{color:var(--ink);margin-bottom:6px}
+a{color:var(--accent)}
+.link{background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:14px;padding:4px 0}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px);z-index:10}
+@media (max-width:420px){.clock{font-size:38px}.row{font-size:14px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="who">
+    <div><div class="eyebrow">Учёт рабочего времени</div><h1>Табель смен</h1></div>
+    <button class="btn small ghost" data-act="logout" id="logoutBtn" hidden>Выйти</button>
+  </header>
+
+  <section class="col" id="viewLogin">
+    <div class="card" id="empLogin">
+      <h2>Вход</h2>
+      <p class="hint" style="margin:6px 0 14px">Введите свой личный код из шести цифр. Его выдаёт владелец.</p>
+      <label for="code">Код<input id="code" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••••"></label>
+      <p class="err" id="loginErr" style="margin-top:10px"></p>
+      <div class="actions"><button class="btn primary" data-act="loginStaff">Войти</button></div>
+      <p style="margin:18px 0 0"><button class="link" data-act="showOwner">Вход для владельца</button></p>
+    </div>
+    <div class="card" id="ownLogin" hidden>
+      <h2>Владелец</h2>
+      <label for="pw" style="margin-top:12px">Пароль<input id="pw" type="password" autocomplete="current-password"></label>
+      <p class="err" id="ownErr" style="margin-top:10px"></p>
+      <div class="actions"><button class="btn primary" data-act="loginOwner">Войти</button><button class="btn ghost" data-act="showStaff">Назад</button></div>
+    </div>
+  </section>
+
+  <section class="col" id="viewStaff" hidden><div id="meBody" class="col"></div></section>
+
+  <section class="col" id="viewOwner" hidden>
+    <div class="card" id="panelStaff" hidden>
+      <h3 id="stTitle">Сотрудник</h3>
+      <div class="fields" style="margin-top:12px">
+        <label for="stName">Имя<input id="stName" type="text" maxlength="60" autocomplete="off"></label>
+        <label for="stRate">Ставка, ₽ в час<input id="stRate" type="text" inputmode="decimal" autocomplete="off"></label>
+      </div>
+      <p class="hint" id="stHint" style="margin-top:10px">Код входа система выдаст сама. Новая ставка действует только на будущие смены.</p>
+      <p class="err" id="stErr" style="margin-top:8px"></p>
+      <div class="actions"><button class="btn primary" data-act="saveStaff">Сохранить</button><button class="btn ghost" data-act="cancelStaff">Отмена</button></div>
+    </div>
+    <div class="card" id="panelShift" hidden>
+      <h3 id="shTitle">Смена</h3>
+      <p class="hint" id="shWho" style="margin-top:4px"></p>
+      <div class="fields" style="margin-top:12px">
+        <label for="shStart">Приход<input id="shStart" type="datetime-local"></label>
+        <label for="shEnd">Уход<input id="shEnd" type="datetime-local"></label>
+        <label for="shRate">Ставка, ₽ в час<input id="shRate" type="text" inputmode="decimal" autocomplete="off"></label>
+      </div>
+      <p class="hint" style="margin-top:10px">Оставьте «Уход» пустым, если смена ещё идёт.</p>
+      <p class="err" id="shErr" style="margin-top:8px"></p>
+      <div class="actions">
+        <button class="btn primary" data-act="saveShift">Сохранить</button>
+        <button class="btn ghost" data-act="cancelShift">Отмена</button>
+        <button class="btn danger" data-act="deleteShift" id="shDelete" hidden>Удалить смену</button>
+      </div>
+    </div>
+    <div id="adminBody" class="col"></div>
+  </section>
+</div>
+<div id="toast" hidden></div>
+
+<script src="config.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var MONTHS = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+  var MONEY = new Intl.NumberFormat("ru-RU",{style:"currency",currency:"RUB",maximumFractionDigits:0});
+  var money = function(n){ return MONEY.format(Math.round(n)); };
+  var esc = function(s){ return String(s == null ? "" : s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
+  var pad = function(n){ return String(n).padStart(2,"0"); };
+  var d0 = new Date();
+  var S = { role:null, code:null, pw:null, me:null, staff:[], shifts:[], url:"", skew:0,
+            month:{y:d0.getFullYear(), m:d0.getMonth()}, expanded:null, confirm:null,
+            shiftEdit:null, staffEdit:null, delArmed:false, busy:false, lastErr:"", punchMsg:"", geoCfg:null, geoBusy:false };
+
+  function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+  function lsSet(k,v){ try{ if(v==null) localStorage.removeItem(k); else localStorage.setItem(k,v); }catch(e){} }
+  function toast(msg){ var t=$("toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(function(){ t.hidden=true; },3500); }
+  function nowMs(){ return Date.now()+S.skew; }
+  function fmtHM(ms){ var m=Math.round(Math.max(0,ms)/60000); return Math.floor(m/60)+":"+pad(m%60); }
+  function fmtDur(ms){ var m=Math.round(Math.max(0,ms)/60000), h=Math.floor(m/60); return h? h+" ч "+pad(m%60)+" мин" : m+" мин"; }
+  function fmtTime(ms){ var d=new Date(ms); return pad(d.getHours())+":"+pad(d.getMinutes()); }
+  function fmtDay(ms){ return new Date(ms).toLocaleDateString("ru-RU",{weekday:"short",day:"numeric",month:"short"}); }
+  function toLocalInput(ms){ var d=new Date(ms); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes()); }
+  function monthRange(){ return [new Date(S.month.y,S.month.m,1).getTime(), new Date(S.month.y,S.month.m+1,1).getTime()]; }
+  function monthLabel(){ return MONTHS[S.month.m]+" "+S.month.y; }
+  function isCurrentMonth(){ var n=new Date(); return S.month.y===n.getFullYear() && S.month.m===n.getMonth(); }
+  function calc(list,now){
+    var ms=0,sum=0,days={};
+    list.forEach(function(s){
+      var e=s.end==null?now:s.end, d=Math.max(0,e-s.start);
+      ms+=d; sum+=d/3600000*(Number(s.rate)||0);
+      var dt=new Date(s.start); days[dt.getFullYear()+"-"+dt.getMonth()+"-"+dt.getDate()]=1;
+    });
+    return {days:Object.keys(days).length, ms:ms, sum:sum};
+  }
+  function shiftsOf(id){ return S.shifts.filter(function(s){ return s.staffId===id; }); }
+  function inMonth(list){ var r=monthRange(); return list.filter(function(s){ return s.start>=r[0] && s.start<r[1]; }); }
+  function openOf(list){ var o=list.filter(function(s){ return s.end==null; }).sort(function(a,b){ return b.start-a.start; }); return o[0]||null; }
+  function clockText(ms){ var s=Math.floor(Math.max(0,ms)/1000); return pad(Math.floor(s/3600))+":"+pad(Math.floor(s%3600/60))+":"+pad(s%60); }
+  function monthNav(){
+    return '<div class="monthnav"><button class="btn small" data-act="prev" aria-label="Предыдущий месяц">←</button><span class="label">'+esc(monthLabel())+'</span>'+
+      '<button class="btn small" data-act="next" aria-label="Следующий месяц"'+(isCurrentMonth()?' disabled':'')+'>→</button></div>';
+  }
+
+  /* ---------- связь с сервером ---------- */
+  var API_URL = (window.APP_CONFIG && window.APP_CONFIG.apiUrl) || "";
+  function userErr(msg){ var e=new Error(msg); e.userMsg=msg; return e; }
+  function call(req){
+    return new Promise(function(res,rej){
+      if(!/^https:\/\/script\.google\.com\/\S+\/exec$/.test(API_URL)){ rej(userErr("Не задан адрес сервера. Откройте файл config.js и вставьте адрес.")); return; }
+      var ctl=("AbortController" in window)?new AbortController():null;
+      var t=setTimeout(function(){ if(ctl) ctl.abort(); },30000);
+      fetch(API_URL,{method:"POST",body:JSON.stringify(req),redirect:"follow",signal:ctl?ctl.signal:undefined})
+        .then(function(r){ return r.text(); })
+        .then(function(txt){
+          clearTimeout(t);
+          var j; try{ j=JSON.parse(txt); }catch(e){ rej(userErr("Сервер ответил не так, как ожидалось. Проверьте, что в Apps Script выпущена новая версия.")); return; }
+          res(j);
+        })
+        .catch(function(e){ clearTimeout(t); rej(e); });
+    });
+  }
+  function apply(r){
+    S.skew=(r.now||Date.now())-Date.now();
+    if(S.role==="staff"){ S.me=r.me; S.shifts=r.shifts||[]; }
+    else { S.staff=r.staff||[]; S.shifts=r.shifts||[]; S.url=r.url||""; S.geoCfg=r.cfg||null; }
+  }
+  async function act(req,okMsg,silent){
+    if(S.busy) return null;
+    S.busy=true; if(!silent) render();
+    try{
+      var r=await call(req);
+      if(!r || !r.ok){ S.lastErr=(r && r.error) || "Ошибка."; return null; }
+      apply(r); if(okMsg) toast(okMsg);
+      return r;
+    }catch(e){ S.lastErr=(e && e.userMsg) || "Нет связи с сервером. Попробуйте ещё раз."; return null; }
+    finally{ S.busy=false; render(); }
+  }
+  function staffReq(action,geo){ var o={role:"staff",action:action,code:S.code}; if(geo) o.geo=geo; return o; }
+  function ownerReq(action,extra){ var o={role:"owner",action:action,password:S.pw}; for(var k in (extra||{})) o[k]=extra[k]; return o; }
+  async function ownerAct(action,extra,okMsg){
+    var r=await act(ownerReq(action,extra),okMsg);
+    if(!r){ toast(S.lastErr); }
+    return r;
+  }
+
+  /* ---------- место и отметка ---------- */
+  function getGeo(){
+    return new Promise(function(res){
+      var done=false, t=null;
+      function fin(v){ if(!done){ done=true; clearTimeout(t); res(v); } }
+      t=setTimeout(function(){ fin({err:"timeout"}); },11000);
+      try{
+        if(!navigator.geolocation){ fin({err:"unsupported"}); return; }
+        navigator.geolocation.getCurrentPosition(function(p){
+          fin({lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy});
+        },function(e){
+          fin({err:(e && e.code===1)?"denied":"fail"});
+        },{enableHighAccuracy:true, timeout:10000, maximumAge:0});
+      }catch(e){ fin({err:"fail"}); }
+    });
+  }
+  function kmText(m){ return m<1000 ? Math.round(m)+" м" : (m/1000).toFixed(1).replace(".",",")+" км"; }
+  function punchNote(){
+    return (S.punchMsg?'<p class="err" style="font-size:14px">'+esc(S.punchMsg)+'</p>':'')+
+      '<p class="hint">При отметке записывается ваше место.</p>';
+  }
+  async function punch(action){
+    if(S.geoBusy) return;
+    if(S.busy){ toast("Секунду, обновляю данные. Нажмите ещё раз."); return; }
+    S.punchMsg=""; S.geoBusy=true; render();
+    var geo=await getGeo();
+    S.geoBusy=false;
+    var r=await act(staffReq(action,geo),null);
+    if(!r){ S.punchMsg=S.lastErr; render(); return; }
+    var word=action==="in"?"Приход записан":"Уход записан", g=r.geo||{state:"none"};
+    if(g.state==="out") word+=". Вы не в магазине: "+kmText(g.dist);
+    else if(g.state!=="in") word+=". Место определить не удалось";
+    toast(word);
+  }
+
+  /* ---------- вход ---------- */
+  async function loginStaff(){
+    var code=$("code").value.trim(); $("loginErr").textContent="";
+    if(!/^\d{6}$/.test(code)){ $("loginErr").textContent="Код состоит из шести цифр."; return; }
+    S.role="staff"; S.code=code;
+    var r=await act(staffReq("me"));
+    if(r){ lsSet("tabel.code",code); $("code").value=""; }
+    else { S.role=null; S.code=null; $("loginErr").textContent=S.lastErr; render(); }
+  }
+  async function loginOwner(){
+    var pw=$("pw").value; $("ownErr").textContent="";
+    if(!pw){ $("ownErr").textContent="Введите пароль."; return; }
+    S.role="owner"; S.pw=pw;
+    var r=await act(ownerReq("load"));
+    if(r){ $("pw").value=""; S.expanded=null; }
+    else { S.role=null; S.pw=null; $("ownErr").textContent=S.lastErr; render(); }
+  }
+  function logout(){
+    S.role=null; S.code=null; S.pw=null; S.me=null; S.staff=[]; S.shifts=[]; lsSet("tabel.code",null);
+    $("panelStaff").hidden=true; $("panelShift").hidden=true; render();
+  }
+
+  /* ---------- экран сотрудника ---------- */
+  function renderMe(){
+    var t=nowMs(), op=openOf(S.shifts);
+    var mm=calc(inMonth(S.shifts),t), all=calc(S.shifts,t);
+    var list=inMonth(S.shifts).sort(function(a,b){ return b.start-a.start; });
+    var statusHtml = op
+      ? '<div class="status"><div class="line"><span class="dot on"></span>На смене с '+fmtTime(op.start)+(new Date(op.start).toDateString()!==new Date(t).toDateString()?' ('+esc(fmtDay(op.start))+')':'')+'</div><div class="clock mono" id="clockEl">'+clockText(t-op.start)+'</div></div><button class="btn big stop" data-act="out"'+(S.busy||S.geoBusy?' disabled':'')+'>'+(S.geoBusy?'Определяю место…':'Ушёл')+'</button>'+punchNote()
+      : '<div class="status"><div class="line"><span class="dot"></span>Сейчас не на смене</div><div class="clock mono" style="color:var(--muted)">--:--:--</div></div><button class="btn big primary" data-act="in"'+(S.busy||S.geoBusy?' disabled':'')+'>'+(S.geoBusy?'Определяю место…':'Пришёл')+'</button>'+punchNote();
+    var rows = list.length ? list.map(function(s){
+      var live=s.end==null, d=(live?t:s.end)-s.start, long=live && d>16*3600000;
+      return '<div class="shift"><div>'+esc(fmtDay(s.start))+(live?'<span class="tag live">идёт</span>':'')+(long?'<span class="tag warn">забыли уход?</span>':'')+(s.edited?'<span class="tag">правка</span>':'')+'</div>'+
+        '<div class="t">'+fmtTime(s.start)+' – '+(live?'…':fmtTime(s.end))+' · '+esc(fmtDur(d))+'</div>'+
+        '<div class="m">'+money(d/3600000*(Number(s.rate)||0))+'</div></div>';
+    }).join("") : '<div class="empty" style="padding:18px 0">В этом месяце смен нет.</div>';
+    $("meBody").innerHTML =
+      '<div><div class="eyebrow">Сотрудник</div><h2>'+esc(S.me.name)+'</h2></div>'+
+      '<div class="card punch">'+statusHtml+'<div class="stub"></div>'+monthNav()+
+        '<div class="stats"><div class="stat"><span class="eyebrow">Дни</span><span class="v">'+mm.days+'</span></div>'+
+        '<div class="stat"><span class="eyebrow">Часы</span><span class="v">'+fmtHM(mm.ms)+'</span></div>'+
+        '<div class="stat"><span class="eyebrow">Заработано</span><span class="v">'+money(mm.sum)+'</span></div></div>'+
+        '<p class="hint">Ставка сейчас: '+money(S.me.rate||0)+' в час</p></div>'+
+      '<div class="card flat"><div class="eyebrow" style="margin-bottom:8px">За всё время</div>'+
+        '<div class="stats"><div class="stat small"><span class="eyebrow">Дни</span><span class="v">'+all.days+'</span></div>'+
+        '<div class="stat small"><span class="eyebrow">Часы</span><span class="v">'+fmtHM(all.ms)+'</span></div>'+
+        '<div class="stat small"><span class="eyebrow">Заработано</span><span class="v">'+money(all.sum)+'</span></div></div></div>'+
+      '<div class="card"><h3 style="margin-bottom:6px">Смены, '+esc(monthLabel().toLowerCase())+'</h3><div class="list">'+rows+'</div></div>';
+  }
+
+  /* ---------- экран владельца ---------- */
+  function mapLink(c){
+    var m=/(-?\d+\.\d+),\s*(-?\d+\.\d+)/.exec(c||"");
+    return m?' <a href="https://maps.google.com/?q='+m[1]+','+m[2]+'" target="_blank" rel="noopener">карта</a>':"";
+  }
+  function geoTag(label,d,c,edited){
+    var R=(S.geoCfg&&S.geoCfg.radius)||150, cls="tag", txt;
+    if(d!=null){
+      if(d<=R) txt=label+": в магазине";
+      else { cls+=" warn"; txt=label+": "+kmText(d)+" от магазина"; }
+    } else if(c){ cls+=" warn"; txt=label+": место неточное"; }
+    else if(edited) return "";
+    else txt=label+": место не определено";
+    return '<span class="'+cls+'">'+esc(txt)+'</span>'+mapLink(c);
+  }
+  function geoTags(x){
+    var a=geoTag("приход",x.inD,x.inC,x.edited), b=x.end==null?"":geoTag("уход",x.outD,x.outC,x.edited);
+    return a+(a&&b?" ":"")+b;
+  }
+  function geoSummary(){
+    var c=S.geoCfg||{radius:150,enforce:false,tg:false};
+    var ms=inMonth(S.shifts).filter(function(x){ return !x.edited; }), out=0, none=0;
+    ms.forEach(function(x){ if(x.inD==null) none++; else if(x.inD>c.radius) out++; });
+    return "Геозона: "+(c.enforce?"отметка прихода только на территории":"место только записывается")+", радиус "+c.radius+" м. Telegram: "+(c.tg?"подключён":"не подключён")+". За месяц приходов вне магазина: "+out+", без места: "+none+" из "+ms.length+".";
+  }
+  function renderAdmin(){
+    var t=nowMs();
+    var act=S.staff.filter(function(s){ return s.active; }).sort(function(a,b){ return a.name.localeCompare(b.name,"ru"); });
+    var inactive=S.staff.filter(function(s){ return !s.active; });
+    var onNow=act.filter(function(s){ return openOf(shiftsOf(s.id)); }).length;
+    var tot={days:0,ms:0,sum:0};
+    var rowsHtml=act.map(function(s){
+      var ms=inMonth(shiftsOf(s.id)), c=calc(ms,t), op=openOf(shiftsOf(s.id));
+      tot.ms+=c.ms; tot.sum+=c.sum; tot.days+=c.days;
+      var long=op && (t-op.start)>16*3600000;
+      var sub=op ? '<span class="sub">на смене с '+fmtTime(op.start)+(long?' · забыли уход?':'')+'</span>' : '<span class="sub">'+money(s.rate||0)+' в час</span>';
+      var head='<button class="row" data-act="expand" data-id="'+esc(s.id)+'" aria-expanded="'+(S.expanded===s.id)+'">'+
+        '<span class="n"><span class="dot'+(op?' on':'')+'" style="display:inline-block;margin-right:7px"></span>'+esc(s.name)+sub+'</span>'+
+        '<span class="num">'+c.days+'</span><span class="num mono">'+fmtHM(c.ms)+'</span><span class="num">'+money(c.sum)+'</span></button>';
+      if(S.expanded!==s.id) return head;
+      var sh=ms.sort(function(a,b){ return b.start-a.start; }).map(function(x){
+        var live=x.end==null, d=(live?t:x.end)-x.start;
+        return '<div class="shift"><div>'+esc(fmtDay(x.start))+(live?'<span class="tag live">идёт</span>':'')+(x.edited?'<span class="tag">правка</span>':'')+'</div>'+
+          '<div class="t">'+fmtTime(x.start)+' – '+(live?'…':fmtTime(x.end))+' · '+esc(fmtDur(d))+'</div>'+
+          '<div class="m">'+money(d/3600000*(Number(x.rate)||0))+' <button class="btn small ghost" data-act="editShift" data-id="'+esc(x.id)+'">Изменить</button></div>'+
+          (geoTags(x)?'<div style="grid-column:1/-1">'+geoTags(x)+'</div>':'')+'</div>';
+      }).join("") || '<p class="hint" style="padding:8px 0 0">В этом месяце смен нет.</p>';
+      var cr=S.confirm==="remove:"+s.id, cc=S.confirm==="code:"+s.id;
+      return head+'<div class="detail"><div><div class="eyebrow">Код входа</div><div class="code">'+esc(s.code)+'</div></div>'+
+        '<div class="list">'+sh+'</div><div class="actions">'+
+        '<button class="btn small" data-act="addShift" data-id="'+esc(s.id)+'">Добавить смену</button>'+
+        '<button class="btn small" data-act="editStaff" data-id="'+esc(s.id)+'">Имя и ставка</button>'+
+        '<button class="btn small" data-act="newCode" data-id="'+esc(s.id)+'">'+(cc?'Точно сменить код?':'Новый код')+'</button>'+
+        '<button class="btn small danger" data-act="removeStaff" data-id="'+esc(s.id)+'">'+(cr?'Точно убрать?':'Убрать из списка')+'</button></div>'+
+        (cr?'<p class="hint">Человек больше не сможет войти. Его смены и суммы сохранятся, вернуть можно внизу страницы.</p>':'')+
+        (cc?'<p class="hint">Старый код перестанет работать сразу.</p>':'')+'</div>';
+    }).join("");
+    var table = act.length
+      ? '<div class="table"><div class="row head"><span>Сотрудник</span><span class="num">Дни</span><span class="num">Часы</span><span class="num">Сумма</span></div>'+rowsHtml+
+        '<div class="row total"><span>Итого</span><span class="num">'+tot.days+'</span><span class="num mono">'+fmtHM(tot.ms)+'</span><span class="num">'+money(tot.sum)+'</span></div></div>'
+      : '<div class="empty"><h3>Добавьте первого сотрудника</h3><p style="margin:0 0 14px">Нужны имя и ставка в час. Личный код входа система выдаст сама.</p><button class="btn primary" data-act="addStaff">Добавить сотрудника</button></div>';
+    $("adminBody").innerHTML =
+      '<div class="card">'+monthNav()+
+        '<div class="sum" style="margin-top:14px"><div class="stat small"><span class="eyebrow">Сейчас на смене</span><span class="v">'+onNow+' из '+act.length+'</span></div>'+
+        '<div class="stat small"><span class="eyebrow">Часы</span><span class="v">'+fmtHM(tot.ms)+'</span></div>'+
+        '<div class="stat small"><span class="eyebrow">К выплате</span><span class="v">'+money(tot.sum)+'</span></div></div>'+
+        '<p class="hint" style="margin-top:12px">'+esc(geoSummary())+'</p></div>'+
+      '<div class="card"><div class="actions" style="justify-content:space-between;margin-bottom:10px"><h3>Сотрудники</h3><button class="btn small primary" data-act="addStaff">Добавить</button></div>'+table+'</div>'+
+      '<div class="card flat"><div class="eyebrow" style="margin-bottom:8px">Таблица для Excel</div><p class="hint" style="margin-bottom:10px">Все смены с часами и суммами лежат в вашей Google Таблице. Оттуда их можно скачать как Excel.</p>'+
+        (S.url?'<a class="btn small" href="'+esc(S.url)+'" target="_blank" rel="noopener">Открыть таблицу</a>':'')+'</div>'+
+      (inactive.length?'<div class="card flat"><div class="eyebrow" style="margin-bottom:8px">Убраны из списка</div>'+inactive.map(function(s){
+        return '<div class="actions" style="justify-content:space-between;padding:4px 0"><span>'+esc(s.name)+'</span><button class="btn small" data-act="restoreStaff" data-id="'+esc(s.id)+'">Вернуть</button></div>'; }).join("")+'</div>':'');
+  }
+
+  function render(){
+    var role=S.role;
+    $("viewLogin").hidden=!!role; $("viewStaff").hidden=role!=="staff"; $("viewOwner").hidden=role!=="owner";
+    $("logoutBtn").hidden=!role;
+    if(role==="staff" && S.me) renderMe();
+    else if(role==="owner") renderAdmin();
+  }
+
+  /* ---------- панели владельца ---------- */
+  function openStaffPanel(id){
+    S.staffEdit=id||"new";
+    var st=id?S.staff.find(function(s){ return s.id===id; }):null;
+    $("stTitle").textContent=st?"Имя и ставка: "+st.name:"Новый сотрудник";
+    $("stName").value=st?st.name:""; $("stRate").value=st?String(st.rate||""):"";
+    $("stErr").textContent=""; $("panelShift").hidden=true; $("panelStaff").hidden=false;
+    $("panelStaff").scrollIntoView({block:"start"});
+  }
+  async function saveStaff(){
+    var name=$("stName").value.trim(), rate=parseFloat($("stRate").value.replace(",",".")), err=$("stErr");
+    if(!name){ err.textContent="Введите имя."; return; }
+    if(!isFinite(rate)||rate<0){ err.textContent="Введите ставку числом, например 250."; return; }
+    var dup=S.staff.some(function(s){ return s.id!==S.staffEdit && s.active && s.name.toLowerCase()===name.toLowerCase(); });
+    if(dup){ err.textContent="Такое имя уже есть. Добавьте фамилию."; return; }
+    err.textContent="";
+    var adding=S.staffEdit==="new";
+    var r=await ownerAct("saveStaff",{id:adding?null:S.staffEdit,name:name,rate:rate},"Сохранено");
+    if(r){ $("panelStaff").hidden=true; S.staffEdit=null; }
+  }
+  function openShiftPanel(staffId,shiftId){
+    var st=S.staff.find(function(s){ return s.id===staffId; }); if(!st) return;
+    var sh=shiftId?S.shifts.find(function(x){ return x.id===shiftId; }):null;
+    S.shiftEdit={staffId:staffId,shiftId:shiftId||null}; S.delArmed=false;
+    $("shTitle").textContent=sh?"Изменить смену":"Добавить смену"; $("shWho").textContent=st.name;
+    var d=new Date(), base=new Date(d.getFullYear(),d.getMonth(),d.getDate(),9,0).getTime();
+    $("shStart").value=toLocalInput(sh?sh.start:base);
+    $("shEnd").value=sh?(sh.end==null?"":toLocalInput(sh.end)):toLocalInput(base+9*3600000);
+    $("shRate").value=String(sh?sh.rate:(st.rate||""));
+    $("shDelete").hidden=!sh; $("shDelete").textContent="Удалить смену";
+    $("shErr").textContent=""; $("panelStaff").hidden=true; $("panelShift").hidden=false;
+    $("panelShift").scrollIntoView({block:"start"});
+  }
+  async function saveShift(){
+    var e=S.shiftEdit; if(!e) return;
+    var s=$("shStart").value, en=$("shEnd").value, rate=parseFloat($("shRate").value.replace(",",".")), err=$("shErr");
+    if(!s){ err.textContent="Укажите время прихода."; return; }
+    var start=new Date(s).getTime(), end=en?new Date(en).getTime():null;
+    if(!isFinite(rate)||rate<0){ err.textContent="Введите ставку числом."; return; }
+    if(end!=null && end<=start){ err.textContent="Уход должен быть позже прихода."; return; }
+    if(end!=null && end-start>24*3600000){ err.textContent="Смена длиннее 24 часов. Проверьте даты."; return; }
+    err.textContent="";
+    var r=await ownerAct("saveShift",{id:e.shiftId,staffId:e.staffId,start:start,end:end,rate:rate},"Смена сохранена");
+    if(r){ $("panelShift").hidden=true; S.shiftEdit=null; }
+  }
+  async function deleteShift(){
+    var e=S.shiftEdit; if(!e||!e.shiftId) return;
+    if(!S.delArmed){ S.delArmed=true; $("shDelete").textContent="Точно удалить?"; return; }
+    var r=await ownerAct("deleteShift",{id:e.shiftId},"Смена удалена");
+    if(r){ $("panelShift").hidden=true; S.shiftEdit=null; }
+  }
+
+  /* ---------- события ---------- */
+  document.addEventListener("click",function(ev){
+    var el=ev.target.closest("[data-act]"); if(!el) return;
+    var a=el.dataset.act, id=el.dataset.id;
+    switch(a){
+      case "loginStaff": loginStaff(); break;
+      case "loginOwner": loginOwner(); break;
+      case "showOwner": $("empLogin").hidden=true; $("ownLogin").hidden=false; $("pw").focus(); break;
+      case "showStaff": $("ownLogin").hidden=true; $("empLogin").hidden=false; break;
+      case "logout": logout(); break;
+      case "prev": S.month.m--; if(S.month.m<0){ S.month.m=11; S.month.y--; } S.expanded=null; render(); break;
+      case "next": if(!isCurrentMonth()){ S.month.m++; if(S.month.m>11){ S.month.m=0; S.month.y++; } S.expanded=null; render(); } break;
+      case "in": punch("in"); break;
+      case "out": punch("out"); break;
+      case "expand": S.expanded=S.expanded===id?null:id; S.confirm=null; render(); break;
+      case "addStaff": openStaffPanel(null); break;
+      case "editStaff": openStaffPanel(id); break;
+      case "saveStaff": saveStaff(); break;
+      case "cancelStaff": $("panelStaff").hidden=true; S.staffEdit=null; break;
+      case "removeStaff":
+        if(S.confirm==="remove:"+id){ S.confirm=null; var s1=S.staff.find(function(x){ return x.id===id; }); ownerAct("setActive",{id:id,active:false},"Убран из списка"); }
+        else { S.confirm="remove:"+id; render(); }
+        break;
+      case "restoreStaff": ownerAct("setActive",{id:id,active:true},"Возвращён в список"); break;
+      case "newCode":
+        if(S.confirm==="code:"+id){ S.confirm=null; var st=S.staff.find(function(x){ return x.id===id; }); if(st) ownerAct("saveStaff",{id:id,name:st.name,rate:st.rate,newCode:true},"Новый код выдан"); }
+        else { S.confirm="code:"+id; render(); }
+        break;
+      case "addShift": openShiftPanel(id,null); break;
+      case "editShift": var sh=S.shifts.find(function(x){ return x.id===id; }); if(sh) openShiftPanel(sh.staffId,id); break;
+      case "saveShift": saveShift(); break;
+      case "cancelShift": $("panelShift").hidden=true; S.shiftEdit=null; break;
+      case "deleteShift": deleteShift(); break;
+    }
+  });
+  $("code").addEventListener("keydown",function(e){ if(e.key==="Enter") loginStaff(); });
+  $("pw").addEventListener("keydown",function(e){ if(e.key==="Enter") loginOwner(); });
+
+  setInterval(function(){
+    var c=$("clockEl");
+    if(c && S.role==="staff"){ var op=openOf(S.shifts); if(op) c.textContent=clockText(nowMs()-op.start); }
+  },1000);
+  setInterval(function(){
+    if(document.hidden || S.busy || !S.role) return;
+    if(S.role==="staff") act(staffReq("me"),null,true); else act(ownerReq("load"),null,true);
+  },60000);
+
+  (function init(){
+    render();
+    var saved=lsGet("tabel.code");
+    if(saved && /^\d{6}$/.test(saved)){
+      S.role="staff"; S.code=saved;
+      act(staffReq("me")).then(function(r){ if(!r){ S.role=null; S.code=null; lsSet("tabel.code",null); render(); } });
+    }
+  })();
+})();
+</script>
+</body>
+</html>
