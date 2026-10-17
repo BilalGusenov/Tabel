@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Проверка места</title>
+<style>
+body{font:16px/1.5 system-ui,-apple-system,sans-serif;padding:20px;max-width:560px;margin:0 auto}
+button{font:inherit;font-weight:600;padding:14px 18px;width:100%;border-radius:10px;border:0;background:#0E7A5C;color:#fff;margin:12px 0}
+pre{white-space:pre-wrap;word-break:break-word;background:#eee;padding:12px;border-radius:8px;color:#111;font-size:14px}
+</style>
+</head>
+<body>
+<h2>Проверка геопозиции</h2>
+<button id="b">Определить место</button>
+<pre id="o">Нажмите кнопку.</pre>
+<script>
+var o=document.getElementById('o');
+function log(t){ o.textContent=t; }
+var info=['Адрес: '+location.href,
+  'Безопасное соединение: '+(window.isSecureContext?'да':'нет'),
+  'Геолокация в браузере: '+(navigator.geolocation?'есть':'нет')];
+function perm(cb){
+  if(navigator.permissions && navigator.permissions.query){
+    navigator.permissions.query({name:'geolocation'}).then(function(p){ cb(p.state); },function(){ cb('неизвестно'); });
+  } else cb('неизвестно');
+}
+document.getElementById('b').onclick=function(){
+  perm(function(st){
+    var base=info.concat(['Разрешение сейчас: '+st]).join('\n');
+    log(base+'\n\nОпределяю…');
+    if(!navigator.geolocation){ log(base+'\n\nРезультат: в браузере нет геолокации.'); return; }
+    var t0=Date.now();
+    navigator.geolocation.getCurrentPosition(function(p){
+      log(base+'\n\nРезультат: РАБОТАЕТ\nШирота: '+p.coords.latitude.toFixed(5)+'\nДолгота: '+p.coords.longitude.toFixed(5)+
+        '\nТочность: '+Math.round(p.coords.accuracy)+' м\nВремя: '+((Date.now()-t0)/1000).toFixed(1)+' с');
+    },function(e){
+      var why={1:'доступ запрещён (код 1)',2:'телефон не смог определить место (код 2)',3:'не уложился во время (код 3)'}[e.code]||('код '+e.code);
+      log(base+'\n\nРезультат: ОШИБКА, '+why+'\n'+(e.message||''));
+    },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+  });
+};
+</script>
+</body>
+</html>
