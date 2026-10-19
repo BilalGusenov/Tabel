@@ -165,7 +165,7 @@ a{color:var(--accent)}
   var d0 = new Date();
   var S = { role:null, code:null, pw:null, me:null, staff:[], shifts:[], url:"", skew:0,
             month:{y:d0.getFullYear(), m:d0.getMonth()}, expanded:null, confirm:null,
-            shiftEdit:null, staffEdit:null, delArmed:false, busy:false, lastErr:"", punchMsg:"", geoCfg:null, geoBusy:false };
+            shiftEdit:null, staffEdit:null, delArmed:false, busy:false, lastErr:"", punchMsg:"", geoNote:"", geoCfg:null, geoBusy:false };
 
   function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
   function lsSet(k,v){ try{ if(v==null) localStorage.removeItem(k); else localStorage.setItem(k,v); }catch(e){} }
@@ -250,14 +250,21 @@ a{color:var(--accent)}
         navigator.geolocation.getCurrentPosition(function(p){
           fin({lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy});
         },function(e){
-          fin({err:(e && e.code===1)?"denied":"fail"});
+          fin({err:(e && e.code===1)?"denied":(e && e.code===3)?"timeout":"fail"});
         },{enableHighAccuracy:true, timeout:10000, maximumAge:0});
       }catch(e){ fin({err:"fail"}); }
     });
   }
   function kmText(m){ return m<1000 ? Math.round(m)+" м" : (m/1000).toFixed(1).replace(".",",")+" км"; }
+  function geoReason(err){
+    if(err==="denied") return "Нет доступа к геопозиции. Разрешите её: Настройки → Конфиденциальность и безопасность → Службы геолокации → Веб-сайты Safari → «При использовании». Потом обновите страницу.";
+    if(err==="timeout") return "Место не определилось вовремя. Нажмите ещё раз у окна или на улице.";
+    if(err==="unsupported") return "Этот браузер не умеет определять место. Откройте страницу в Safari или Chrome.";
+    return "Телефон не смог определить место. Проверьте, что включены Службы геолокации и интернет, и выйдите к окну или на улицу.";
+  }
   function punchNote(){
     return (S.punchMsg?'<p class="err" style="font-size:14px">'+esc(S.punchMsg)+'</p>':'')+
+      (S.geoNote?'<div class="notice">'+esc(S.geoNote)+'</div>':'')+
       '<p class="hint">При отметке записывается ваше место.</p>';
   }
   async function punch(action){
@@ -267,7 +274,9 @@ a{color:var(--accent)}
     var geo=await getGeo();
     S.geoBusy=false;
     var r=await act(staffReq(action,geo),null);
+    S.geoNote=geo.err?geoReason(geo.err):"";
     if(!r){ S.punchMsg=S.lastErr; render(); return; }
+    render();
     var word=action==="in"?"Приход записан":"Уход записан", g=r.geo||{state:"none"};
     if(g.state==="out") word+=". Вы не в магазине: "+kmText(g.dist);
     else if(g.state!=="in") word+=". Место определить не удалось";
